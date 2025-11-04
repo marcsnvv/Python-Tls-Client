@@ -362,7 +362,7 @@ class Session:
         # in the cookie value the " gets removed, because the fhttp library in golang doesn't accept the character
         request_cookies = [
             {'domain': c.domain, 'expires': c.expires, 'name': c.name, 'path': c.path, 'value': c.value.replace('"', "")}
-            for c in cookies
+            for c in cookies if c is not None
         ]
 
         # --- Proxy ----------------------------------------------------------------------------------------------------
