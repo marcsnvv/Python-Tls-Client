@@ -16,6 +16,7 @@ ClientIdentifiers: TypeAlias = Literal[
     "chrome_116_PSK_PQ",
     "chrome_117",
     "chrome_120",
+    "chrome_latest", # This retrieves the last stable version of Chrome in Windows using Google API. 
     # Safari
     "safari_15_6_1",
     "safari_16_0",
