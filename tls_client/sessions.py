@@ -378,7 +378,16 @@ class Session:
         if type(proxy) is dict and "http" in proxy:
             proxy = proxy["http"]
         elif type(proxy) is str:
-            proxy = proxy
+            # Auto-format the proxy. Most common format when you buy proxies is ip:port:username:password.
+            if not proxy.startswith("http"):
+                method = "http://"
+                if "@" not in proxy:
+                    ip, port, username, password = proxy.split(":")
+                    proxy = f"{method}{username}:{password}@{ip}:{port}"
+                else:
+                    proxy = f"{method}{proxy}"
+            else:
+                proxy = proxy
         else:
             proxy = ""
 
