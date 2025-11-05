@@ -378,16 +378,35 @@ class Session:
         if type(proxy) is dict and "http" in proxy:
             proxy = proxy["http"]
         elif type(proxy) is str:
-            # Auto-format the proxy. Most common format when you buy proxies is ip:port:username:password.
-            if not proxy.startswith("http"):
-                method = "http://"
-                if "@" not in proxy:
-                    ip, port, username, password = proxy.split(":")
-                    proxy = f"{method}{username}:{password}@{ip}:{port}"
+            try:
+                if proxy.startswith("http"):
+                    proxy = proxy
                 else:
-                    proxy = f"{method}{proxy}"
-            else:
-                proxy = proxy
+                    if not "@" in proxy:
+                        if len(proxy.split(":")) > 2:
+                            ip, port, username, password = proxy.split(":")
+                            proxy = f"http://{username}:{password}@{ip}:{port}"
+                        else:
+                            proxy = f"http://{proxy}"
+                    else:
+                        proxy = f"http://{proxy}"
+            except ValueError:
+                raise ValueError(
+                    f"Invalid proxy format: {proxy}\n\n"
+                    "Accepted proxy formats:\n"
+                    " 1) http://ip:port\n"
+                    " 2) https://ip:port\n"
+                    " 3) http://username:password@ip:port\n"
+                    " 4) https://username:password@ip:port\n"
+                    " 5) ip:port                     (auto-converted to http://ip:port)\n"
+                    " 6) ip:port:username:password   (auto-converted to http://username:password@ip:port)\n"
+                    " 7) username:password@ip:port   (auto-converted to http://username:password@ip:port)\n"
+                    " 8) {\"http\": \"<proxy_string>\"} (dictionary form — value is taken as-is)\n\n"
+                    "Notes:\n"
+                    " - Only HTTP/HTTPS proxy schemas are automatically recognized.\n"
+                    " - SOCKS proxies must be passed via dict form (e.g. {\"http\": \"socks5://...\"}).\n"
+                    " - IPv6 and credentials containing ':' or '@' are not supported by this parser.\n"
+                )
         else:
             proxy = ""
 
