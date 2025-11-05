@@ -7,11 +7,52 @@ from .structures import CaseInsensitiveDict
 from .__version__ import __version__
 
 from typing import Any, Dict, List, Optional, Union
-from json import dumps, loads
+from json import dumps, loads, load
 import urllib.parse
+import urllib.request
+import urllib.error
 import base64
 import ctypes
 import uuid
+
+_CHROME_STABLE_WIN_API = "https://versionhistory.googleapis.com/v1/chrome/platforms/win/channels/stable/versions"
+_CHROME_LATEST_CACHE = None
+
+def _get_latest_chrome_version(timeout: float = 5.0):
+    """
+    Returns the latest stable version of Chrome for Windows (e.g., '142.0.7444.60').
+    Caches the result in memory to avoid multiple requests.
+    """
+    global _CHROME_LATEST_CACHE
+    if _CHROME_LATEST_CACHE:
+        return _CHROME_LATEST_CACHE
+    try:
+        with urllib.request.urlopen(_CHROME_STABLE_WIN_API, timeout=timeout) as resp:
+            data = load(resp)
+            versions = data.get("versions", [])
+            if not versions:
+                return None
+
+            # The API usually brings the latest one first.
+            latest = versions[0].get("version")
+            if latest:
+                _CHROME_LATEST_CACHE = latest
+                return latest
+
+            # Backup: sort by numeric tuple major.minor.build.patch
+            def parse_version(vobj: dict):
+                v = vobj.get("version", "")
+                try:
+                    return tuple(int(p) for p in v.split("."))
+                except ValueError:
+                    return tuple()
+
+            versions_sorted = sorted(versions, key=parse_version, reverse=True)
+            latest = versions_sorted[0].get("version") if versions_sorted else None
+            _CHROME_LATEST_CACHE = latest
+            return latest
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError):
+        return None
 
 
 class Session:
@@ -83,6 +124,15 @@ class Session:
         # iPadOS --> safari_ios_15_6
         #
         # for all possible client identifiers, check out the settings.py
+        if client_identifier == "chrome_latest":
+            latest_version = _get_latest_chrome_version()
+            if latest_version:
+                # We convert to 'chrome_<major>' which is the format expected by the fingerprint
+                major = latest_version.split(".")[0]
+                client_identifier = f"chrome_{major}"
+                # Optional: Keep the full version in case you need it later
+                self.chrome_full_version = latest_version
+                
         self.client_identifier = client_identifier
 
         # Set JA3 --> TLSVersion, Ciphers, Extensions, EllipticCurves, EllipticCurvePointFormats
